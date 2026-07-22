@@ -8,8 +8,7 @@ Lab-facing pipeline for **fine-tuned Audio Flamingo 3** distress screening on na
 
 **Read `START_HERE.md` first** if you are not a programmer.
 
-## Features (matches lab workflow)
-
+## Features
 1. Read audio files (multi-file participants supported; do not concatenate)  
 2. AF3 scoring → 5 s windows with timestamps + probabilities  
 3. Two review strategies:  
