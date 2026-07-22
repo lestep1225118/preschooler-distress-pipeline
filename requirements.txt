@@ -1,0 +1,5 @@
+pandas>=2.0
+numpy>=1.24
+PyYAML>=6.0
+soundfile>=0.12
+gradio>=4.0

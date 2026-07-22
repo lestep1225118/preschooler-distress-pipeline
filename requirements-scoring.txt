@@ -1,0 +1,7 @@
+# Extra packages for AF3 scoring (GPU machine or Sapelo2)
+torch
+transformers>=4.51
+peft
+bitsandbytes
+accelerate
+librosa

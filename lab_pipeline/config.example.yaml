@@ -1,0 +1,32 @@
+# Copy to config.yaml and edit paths.
+
+run_dir: lab_runs/my_first_run
+
+scores_csv: demo/sample_scores.csv
+
+audio_map_csv: null
+audio_dir: null
+audio_name_template: "{file_id}.wav"
+
+threshold: 0.32
+
+modes:
+  consecutive: true
+  cluster_top50: true
+
+cluster_gap_sec: 30
+top_fraction: 0.50
+window_sec: 5
+write_clips: false
+
+episode_gap_sec: 300
+episode_pre_buffer_sec: 60
+
+scoring:
+  audio_dir: null
+  audio_map_csv: null
+  adapter_dir: null
+  out_csv: lab_runs/my_first_run/output/windows_scored.csv
+  stride: 5
+  recursive: false
+  base_only: false

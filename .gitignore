@@ -1,0 +1,23 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+.env
+
+# Local runs / large outputs
+lab_runs/
+*.wav
+*.zip
+
+# Model weights (obtain separately; do not commit)
+**/lora_adapter/
+**/adapter_model*
+models/
+
+# OS / IDE
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/

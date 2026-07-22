@@ -1,0 +1,4 @@
+participant_id,file_id,wav_path
+105,105_day1,D:/path/to/105_day1.wav
+105,105_day2,D:/path/to/105_day2.wav
+107,107_sessionA,D:/path/to/107_sessionA.wav
