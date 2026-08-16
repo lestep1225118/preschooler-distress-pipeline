@@ -1,0 +1,7 @@
+# Copy to a run folder and edit paths, then:
+#   python -m vtc_pipeline.conversational_turns --rttm <rttm.csv> --out-dir <out>
+
+rttm_csv: vtc_pipeline/demo/sample_rttm.csv
+out_dir: vtc_runs/example_run
+gap_sec: 5.0
+block_sec: 300

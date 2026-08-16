@@ -1,8 +1,11 @@
 # START HERE — Preschooler Distress Detection Pipeline
 
-This folder is a **standalone** app for screening preschooler distress in home audio using fine-tuned Audio Flamingo 3 (AF3).
+This folder is a **standalone** lab package with two apps:
 
-It does **not** include participant audio or the large model adapter (those stay private).
+1. **AF3 distress screening** (`lab_pipeline`) — Audio Flamingo 3  
+2. **VTC conversational turns** (`vtc_pipeline`) — adult ↔ key-child turn counts  
+
+It does **not** include participant audio or large model weights (those stay private).
 
 ---
 
@@ -16,63 +19,67 @@ Install **Python 3.10+** from https://www.python.org/downloads/
 - Windows: open the folder in File Explorer → address bar → type `powershell` → Enter  
 - Or: open Terminal / Command Prompt and `cd` into this folder
 
-## 3. Install the basic packages
+## 3. Install packages
 
 ```bash
 python -m pip install -r requirements.txt
 ```
 
-## 4. Open the app
+---
+
+# App A — AF3 distress pipeline
 
 ```bash
 python -m lab_pipeline.gui_app
 ```
 
-A browser should open to **http://127.0.0.1:7860**
+Browser: **http://127.0.0.1:7860**
 
-## 5. Try without scoring (demo)
+### Quick demo (no scoring)
 
 1. Leave **Scores CSV** as `demo/sample_scores.csv`  
 2. Leave **Audio folder** empty (clips will be skipped)  
 3. Uncheck **Write review / episode WAV clips** in Settings  
-4. Go to tab **2 · Phase 1** → click **Run Phase 1**  
-5. Open tab **3 · Review notes** → Load notes → set some rows to `1` / `0` → Save  
+4. Tab **2 · Phase 1** → **Run Phase 1**  
+5. Tab **3 · Review notes** → Load → mark some rows `1` / `0` → Save  
 6. Tab **4 · Phase 2** → Run Phase 2  
 
-This proves the review → notes → episodes path works.
+### Real scoring
 
-## 6. Score your own audio (real use)
-
-You need:
-
-1. A folder of **WAV** files (one file per recording — do **not** merge days)  
-2. The fine-tuned **LoRA adapter** folder (contains `adapter_config.json`) — copy from Sapelo2 / Drive  
-3. A **GPU** computer, **or** Sapelo2 for daylong files  
-
-**On this computer (GPU + adapter):**  
-- Set Audio folder → Build audio map  
-- Set Adapter dir → Run AF3 scoring (start with Limit files = 1, Limit windows = 20)  
-- Then Phase 1 → notes → Phase 2  
-
-**On Sapelo2:**  
-- Tab 1 → Prepare Sapelo2 bundle → follow `sapelo2_bundle/README.txt`  
-- Also see `slurm/` job scripts  
-
-For scoring dependencies on a GPU machine:
-
-```bash
-python -m pip install -r requirements-scoring.txt
-```
+Needs WAV folder + LoRA adapter + GPU (or Sapelo2). See `lab_pipeline/README.md`.
 
 ---
 
-## What the app produces
+# App B — VTC conversational turns
 
-| Step | Output |
-|------|--------|
-| Score | `windows_scored.csv` — every 5 s window + probability |
-| Phase 1 | Positive windows; consecutive + top-50% cluster reviews; 5 s clips; notes templates |
-| Notes | You mark true/false distress |
-| Phase 2 | Human distress-seconds file; 5-minute episodes; episode clips (+ 1 min buffer) |
+```bash
+python -m vtc_pipeline.gui_app
+```
 
-More detail: `README.md` and `lab_pipeline/README.md`
+Browser: **http://127.0.0.1:7861** (AF3 stays on 7860)
+
+### Quick demo
+
+1. Leave the demo `rttm.csv` path as-is (or click **Run demo**)  
+2. Click **Compute turns**  
+3. Download the three CSVs: totals, by 5-min block, detail  
+
+**Turn definition:** adult (FEM/MAL) and key child (KCHI) speech within 5 seconds of each other.  
+Counts are reported per **5-minute block** (zeros included) and for the **full recording**.
+
+### Real data
+
+1. Run **VTC** speaker labeling on **Sapelo2** (Linux/GPU) — see `vtc_pipeline/sapelo/README.md`  
+2. Download `rttm.csv`  
+3. Point the VTC app at that file → Compute turns  
+
+More detail: `vtc_pipeline/README.md`
+
+---
+
+## What each app produces
+
+| App | Output |
+|-----|--------|
+| AF3 | Scored 5 s windows → review clips/notes → 5-min distress episodes |
+| VTC turns | `conversational_turns_total.csv`, `conversational_turns_by_5min.csv`, `conversational_turns_detail.csv` |

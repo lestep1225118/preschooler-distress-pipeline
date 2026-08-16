@@ -8,6 +8,7 @@ venv/
 
 # Local runs / large outputs
 lab_runs/
+vtc_runs/
 *.wav
 *.zip
 
