@@ -94,7 +94,9 @@ Counts **adult (FEM / MAL) ↔ key child (KCHI)** turns from a VTC `rttm.csv`.
 |---------|---------|
 | Turn gap | 5 seconds (end of one → start of other) |
 | Blocks | 5 minutes (empty blocks kept as **0**) |
-| Ignored | OCH (other child) |
+
+**Turn pairs:** adult↔KCHI (FEM/MAL breakdown), MAL↔FEM, KCHI↔OCH  
+**Speech duration:** total seconds per label (FEM, MAL, KCHI, OCH) in each block
 
 **Workflow:** run VTC on Sapelo2 → download `rttm.csv` → compute turns here (or on Sapelo).
 """
@@ -161,8 +163,8 @@ After the job finishes, download `rttm.csv` and use tab **1 · Compute turns**.
 ### Outputs
 
 1. `conversational_turns_total.csv` — totals per recording  
-2. `conversational_turns_by_5min.csv` — per 5-min block (zeros included)  
-3. `conversational_turns_detail.csv` — one row per turn  
+2. `conversational_turns_by_5min.csv` — per 5-min block (turns + speech duration; zeros included)  
+3. `conversational_turns_detail.csv` — one row per turn (`turn_type`: adult_kchi, mal_fem, kchi_och)  
 
 ### CLI (no GUI)
 

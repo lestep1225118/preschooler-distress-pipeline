@@ -1,21 +1,40 @@
 # VTC conversational-turns pipeline
 
-Takes **VTC** speaker segments (`rttm.csv` with FEM / MAL / KCHI / OCH) and counts
-**adult ↔ key-child conversational turns**.
+Takes **VTC** speaker segments (`rttm.csv` with FEM / MAL / KCHI / OCH) and computes
+**conversational turns** plus **speech duration** per 5-minute block.
 
-## Definition
+## Turn definition
 
-A turn = speech by one party (adult **FEM** or **MAL**, or key child **KCHI**)
-followed by speech by the other within **5 seconds**
-(gap from end of first segment to start of second). **OCH** is ignored.
+Speech by one party followed by speech by the other within **5 seconds**
+(gap from end of first segment to start of second).
+
+## Turn pairs (per 5-min block + recording total)
+
+| Column | Pair |
+|--------|------|
+| `turns_adult_kchi` | Adult (FEM or MAL) ↔ key child |
+| `turns_FEM_kchi` / `turns_MAL_kchi` | Breakdown of adult ↔ KCHI |
+| `turns_mal_fem` | Male adult ↔ female adult |
+| `turns_kchi_och` | Key child ↔ other child |
+
+## Speech duration (seconds per 5-min block + total)
+
+| Column | Label |
+|--------|-------|
+| `speech_duration_FEM_s` | Adult female |
+| `speech_duration_MAL_s` | Adult male |
+| `speech_duration_KCHI_s` | Key child |
+| `speech_duration_OCH_s` | Other child |
+
+Segment time is clipped to each block boundary (overlap counted in each block).
 
 ## Outputs
 
 | File | Description |
 |------|-------------|
-| `conversational_turns_total.csv` | Totals per recording (adult–KCHI, FEM–KCHI, MAL–KCHI) |
-| `conversational_turns_by_5min.csv` | Same counts per 5-minute block (**zeros included**) |
-| `conversational_turns_detail.csv` | One row per turn |
+| `conversational_turns_total.csv` | Totals per recording |
+| `conversational_turns_by_5min.csv` | Per 5-minute block (**zeros included**) |
+| `conversational_turns_detail.csv` | One row per turn (`turn_type` column) |
 
 ## GUI (local)
 
