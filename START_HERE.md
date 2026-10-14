@@ -11,8 +11,9 @@ It does **not** include participant audio or large model weights (those stay pri
 
 ## 1. Install Python
 
-Install **Python 3.12** (3.10–3.13 also work) from https://www.python.org/downloads/  
-(On Windows, check “Add Python to PATH”.)
+Install **Python 3.12**. Windows installer (direct link to 3.12.10, the last 3.12 release with an installer):  
+https://www.python.org/ftp/python/3.12.10/python-3.12.10-amd64.exe  
+(Check “Add python.exe to PATH” on the first screen.)
 
 Avoid the newest Python release: some packages don't have ready-made installers for it yet, and `pip install` fails with “Microsoft Visual C++ 14.0 or greater is required”. If you have several Python versions, use `py -3.12` in place of `python` in the commands below.
 
