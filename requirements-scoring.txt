@@ -1,6 +1,8 @@
 # Extra packages for AF3 scoring (GPU machine or Sapelo2)
+# On Windows, install a CUDA build of torch FIRST (see lab_pipeline/LOCAL_GPU_SETUP.md):
+#   py -3.12 -m pip install torch --index-url https://download.pytorch.org/whl/cu130
 torch
-transformers>=4.51
+transformers>=5.0
 peft
 bitsandbytes
 accelerate

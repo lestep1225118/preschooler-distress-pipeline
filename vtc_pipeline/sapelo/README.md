@@ -2,6 +2,8 @@
 
 VTC 2.x needs Linux + FFmpeg + GPU. Use Sapelo2 for daylong / long clips.
 
+> **New users: follow `GACRC_GUIDE.md` instead.** It works for any GACRC account and uses `run_vtc_lab.sbatch`. The notes below are the original developer setup (paths tied to one account).
+
 ## One-time setup
 
 ```bash

@@ -49,7 +49,10 @@ Browser: **http://127.0.0.1:7860**
 
 ### Real scoring
 
-Needs WAV folder + LoRA adapter + GPU (or Sapelo2). See `lab_pipeline/README.md`.
+Needs WAV folder + LoRA adapter + GPU (or Sapelo2).
+
+- **Your own NVIDIA GPU (12 GB+):** step-by-step in `lab_pipeline/LOCAL_GPU_SETUP.md`
+- **Sapelo2:** see `lab_pipeline/README.md`
 
 ---
 
@@ -72,7 +75,7 @@ Counts are reported per **5-minute block** (zeros included) and for the **full r
 
 ### Real data
 
-1. Run **VTC** speaker labeling on **Sapelo2** (Linux/GPU) — see `vtc_pipeline/sapelo/README.md`  
+1. Run **VTC** speaker labeling on **Sapelo2** (Linux/GPU) — step-by-step in `vtc_pipeline/sapelo/GACRC_GUIDE.md`  
 2. Download `rttm.csv`  
 3. Point the VTC app at that file → Compute turns  
 
