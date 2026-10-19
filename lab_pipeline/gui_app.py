@@ -352,9 +352,20 @@ def make_download_zips(run_dir: str) -> Tuple[Optional[str], Optional[str], Opti
     c1 = out / "clips_consecutive"
     c2 = out / "clips_cluster_top50"
     e = out / "phase2" / "episode_clips"
+    ep_csv = out / "phase2" / "episodes.csv"
     z1 = zip_folder(c1, dl / f"clips_consecutive_{stamp}.zip") if c1.is_dir() else None
     z2 = zip_folder(c2, dl / f"clips_cluster_top50_{stamp}.zip") if c2.is_dir() else None
-    z3 = zip_folder(e, dl / f"episode_clips_{stamp}.zip") if e.is_dir() else None
+    z3 = None
+    if e.is_dir():
+        # Bundle episodes.csv with the clips so times/file IDs travel with the audio
+        stage = dl / f"_episode_bundle_{stamp}"
+        if stage.exists():
+            shutil.rmtree(stage)
+        shutil.copytree(e, stage)
+        if ep_csv.is_file():
+            shutil.copy2(ep_csv, stage / "episodes.csv")
+        z3 = zip_folder(stage, dl / f"episode_clips_{stamp}.zip")
+        shutil.rmtree(stage, ignore_errors=True)
     return z1, z2, z3, f"Downloads folder: {dl}"
 
 

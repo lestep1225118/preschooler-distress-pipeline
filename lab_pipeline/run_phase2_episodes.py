@@ -27,6 +27,7 @@ from lab_pipeline import (
     ensure_dir,
     load_config,
     resolve_audio_map,
+    seconds_to_hms,
 )
 
 
@@ -138,10 +139,14 @@ def main() -> None:
                         "file_id": str(file_id),
                         "episode_id": i,
                         "episode_start": estart,
+                        "episode_start_hms": seconds_to_hms(estart),
                         "episode_end": eend,
+                        "episode_end_hms": seconds_to_hms(eend),
                         "episode_span_sec": eend - estart,
                         "clip_start": clip_start,
+                        "clip_start_hms": seconds_to_hms(clip_start),
                         "clip_end": eend,
+                        "clip_end_hms": seconds_to_hms(eend),
                         "pre_buffer_sec": estart - clip_start,
                         "n_distress_seconds": n_sec,
                     }

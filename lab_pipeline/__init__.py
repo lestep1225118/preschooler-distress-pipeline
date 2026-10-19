@@ -15,6 +15,14 @@ WINDOW_SEC_DEFAULT = 5
 STRIDE_SEC = 5
 
 
+def seconds_to_hms(seconds: int | float) -> str:
+    """Format seconds from file start as H:MM:SS (or HH:MM:SS if ≥10 hours)."""
+    s = int(max(0, round(float(seconds))))
+    h, rem = divmod(s, 3600)
+    m, sec = divmod(rem, 60)
+    return f"{h}:{m:02d}:{sec:02d}"
+
+
 def load_config(path: str) -> Dict[str, Any]:
     with open(path, "r", encoding="utf-8") as f:
         cfg = yaml.safe_load(f) or {}
