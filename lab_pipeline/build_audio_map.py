@@ -1,5 +1,5 @@
 """
-Build audio_map.csv from a folder of WAVs (multi-file participants OK).
+Build audio_map.csv from a folder of audio files (multi-file participants OK).
 
 file_id = filename stem (preserves recording identity / clock times).
 participant_id = leading digits of stem when present, else stem.
@@ -19,6 +19,8 @@ from pathlib import Path
 
 import pandas as pd
 
+from lab_pipeline.audio_io import AUDIO_EXTS
+
 
 def participant_from_stem(stem: str) -> str:
     m = re.match(r"^(\d+)", stem)
@@ -36,9 +38,12 @@ def main() -> None:
     if not root.is_dir():
         raise SystemExit(f"Not a directory: {root}")
 
-    wavs = sorted(root.rglob("*.wav") if args.recursive else root.glob("*.wav"))
+    files = []
+    for ext in AUDIO_EXTS:
+        files.extend(root.rglob(f"*{ext}") if args.recursive else root.glob(f"*{ext}"))
+    wavs = sorted({p for p in files if p.is_file()})
     if not wavs:
-        raise SystemExit(f"No WAVs in {root}")
+        raise SystemExit(f"No audio files ({', '.join(AUDIO_EXTS)}) in {root}")
 
     rows = []
     for wav in wavs:

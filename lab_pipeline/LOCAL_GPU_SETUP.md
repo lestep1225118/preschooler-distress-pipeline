@@ -78,6 +78,16 @@ Same as the test, but set **Limit files = 0** and **Limit windows per file = 0**
 
 When it finishes, the scores CSV is filled in automatically. Continue with Phase 1 → Review notes → Phase 2 as in the tutorial video.
 
+### Next time
+
+The GPU packages and model download only happen once. Next session:
+
+```
+py -3.12 -m lab_pipeline.gui_app
+```
+
+Use a **new Run folder** for each participant (or each batch). Paste the same adapter path, set Limit files/windows to 0, and click **Run AF3 scoring**. To review later without scoring again, leave Tab 1 alone and start at **Tab 2 · Phase 1** (or open `output/review_notes_*.csv` in Excel).
+
 ---
 
 ## Troubleshooting

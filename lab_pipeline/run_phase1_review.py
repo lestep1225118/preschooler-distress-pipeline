@@ -10,10 +10,13 @@ Outputs under {run_dir}/output/:
   - positive_windows.csv                        (epochs >= threshold, with timestamps)
   - review_consecutive.csv                      (merged adjacent positives + peak window)
   - review_cluster_top50.csv                    (30 s clusters, top 50%, peak window)
+  - review_cluster_bottom50.csv                 (same clusters, remaining 50%)
   - review_notes_consecutive.csv                (RA template)
   - review_notes_cluster_top50.csv
+  - review_notes_cluster_bottom50.csv
   - clips_consecutive/                          (5 s peak WAVs, if write_clips)
   - clips_cluster_top50/
+  - clips_cluster_bottom50/
 
 Usage:
   python -m lab_pipeline.run_phase1_review --config lab_pipeline/config.yaml
@@ -34,6 +37,7 @@ from lab_pipeline import (
     load_scores,
     make_review_notes_template,
     resolve_audio_map,
+    sort_segments_for_review,
     write_peak_clips,
 )
 
@@ -59,7 +63,11 @@ def main() -> None:
     window_sec = int(cfg.get("window_sec", 5))
     cluster_gap = int(cfg.get("cluster_gap_sec", 30))
     top_fraction = float(cfg.get("top_fraction", 0.50))
-    modes = cfg.get("modes") or {"consecutive": True, "cluster_top50": True}
+    modes = cfg.get("modes") or {
+        "consecutive": True,
+        "cluster_top50": True,
+        "cluster_bottom50": True,
+    }
     write_clips = bool(cfg.get("write_clips", True))
 
     pos = scores[scores["pred_score"].astype(float) >= threshold].copy()
@@ -92,6 +100,7 @@ def main() -> None:
             segments["wav_path"] = segments["file_id"].map(audio_map)
             segments["clip_path"] = None
             segments["clip_status"] = "skipped"
+        segments = sort_segments_for_review(segments)
 
         review_path = out_dir / f"review_{name}.csv"
         segments.to_csv(review_path, index=False)
@@ -121,6 +130,18 @@ def main() -> None:
             top_fraction=top_fraction,
         )
         emit("cluster_top50", clusters)
+
+    if modes.get("cluster_bottom50", True):
+        bottom = build_segment_table(
+            scores,
+            threshold,
+            mode="cluster",
+            window_sec=window_sec,
+            cluster_gap_sec=cluster_gap,
+            top_fraction=top_fraction,
+            keep="bottom",
+        )
+        emit("cluster_bottom50", bottom)
 
     print(f"\nDone. Outputs in {out_dir}")
 

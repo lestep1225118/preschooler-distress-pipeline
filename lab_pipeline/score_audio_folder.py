@@ -1,11 +1,11 @@
 """
-Score WAV files with fine-tuned Audio Flamingo 3 (LoRA).
+Score audio files (WAV/MP3/M4A/FLAC) with fine-tuned Audio Flamingo 3 (LoRA).
 
 Writes a windows CSV compatible with lab_pipeline Phase 1:
   participant_id, file_id, start_second, end_second, pred_score [, pred_distress, response]
 
 Inputs (pick one):
-  --audio-dir   folder of WAVs (optional --recursive / --file-glob-stem)
+  --audio-dir   folder of WAV/MP3/M4A/FLAC (optional --recursive / --file-glob-stem)
   --audio-map-csv  CSV with columns file_id, wav_path [, participant_id]
 
 Multiple files per participant are scored separately (do NOT concatenate).
@@ -34,11 +34,11 @@ from audio_flamingo3_lopo_eval_colab import (
     predict_window,
     score_window,
 )
+from lab_pipeline.audio_io import AUDIO_EXTS, audio_duration_sec
 
 
 def wav_duration_sec(wav_path: str) -> float:
-    with sf.SoundFile(wav_path, "r") as f:
-        return float(len(f) / float(f.samplerate))
+    return audio_duration_sec(wav_path)
 
 
 def participant_from_stem(stem: str) -> str:
@@ -53,13 +53,18 @@ def normalize_file_id(stem: str) -> str:
 
 
 def discover_wavs(audio_dir: Path, recursive: bool) -> List[Path]:
-    if recursive:
-        return sorted(p for p in audio_dir.rglob("*.wav") if p.is_file())
-    # Prefer daylong spliced files when present
-    spliced = sorted(audio_dir.glob("*_spliced_6hours.wav"))
+    def collect(pattern: str):
+        if recursive:
+            return [p for p in audio_dir.rglob(pattern) if p.is_file()]
+        return [p for p in audio_dir.glob(pattern) if p.is_file()]
+
+    spliced = sorted(collect("*_spliced_6hours.wav"))
     if spliced:
         return spliced
-    return sorted(p for p in audio_dir.glob("*.wav") if p.is_file())
+    files: List[Path] = []
+    for ext in AUDIO_EXTS:
+        files.extend(collect(f"*{ext}"))
+    return sorted(set(files))
 
 
 def jobs_from_audio_map(map_csv: Path) -> List[Tuple[str, str, Path]]:

@@ -10,6 +10,8 @@ import numpy as np
 import pandas as pd
 import yaml
 
+from lab_pipeline.audio_io import AUDIO_EXTS
+
 
 WINDOW_SEC_DEFAULT = 5
 STRIDE_SEC = 5
@@ -96,15 +98,17 @@ def resolve_audio_map(cfg: Dict[str, Any], file_ids: List[str]) -> Dict[str, str
     for fid in file_ids:
         candidates = [
             root / template.format(file_id=fid, participant_id=fid),
-            root / f"{fid}.wav",
             root / f"{fid}_spliced_6hours.wav",
         ]
+        for ext in AUDIO_EXTS:
+            candidates.append(root / f"{fid}{ext}")
         # recursive fallback: exact stem match
         hit = next((c for c in candidates if c.is_file()), None)
         if hit is None:
-            matches = list(root.rglob(f"{fid}.wav")) + list(
-                root.rglob(f"{fid}_spliced_6hours.wav")
-            )
+            matches = []
+            for ext in AUDIO_EXTS:
+                matches.extend(root.rglob(f"{fid}{ext}"))
+            matches.extend(root.rglob(f"{fid}_spliced_6hours.wav"))
             if matches:
                 hit = matches[0]
         if hit is not None:
@@ -155,6 +159,7 @@ def build_segment_table(
     window_sec: int,
     cluster_gap_sec: int = 30,
     top_fraction: Optional[float] = None,
+    keep: str = "top",
 ) -> pd.DataFrame:
     """
     mode:
@@ -210,12 +215,31 @@ def build_segment_table(
     out["global_rank"] = np.arange(1, len(out) + 1)
     if top_fraction is not None:
         n_keep = max(1, int(np.ceil(len(out) * float(top_fraction))))
-        out["in_top_fraction"] = out["global_rank"] <= n_keep
-        out = out[out["in_top_fraction"]].copy()
+        in_top = out["global_rank"] <= n_keep
+        out["in_top_fraction"] = in_top
+        if keep == "bottom":
+            out = out[~in_top].copy()
+        else:
+            out = out[in_top].copy()
     else:
         out["in_top_fraction"] = True
     out["segment_id"] = np.arange(1, len(out) + 1)
     return out
+
+
+def sort_segments_for_review(segments: pd.DataFrame) -> pd.DataFrame:
+    """Match File Explorer order: clip filename, then file, then peak time."""
+    if segments is None or segments.empty:
+        return segments
+    out = segments.copy()
+    if "clip_path" in out.columns:
+        out["_clip_name"] = out["clip_path"].fillna("").map(lambda p: Path(str(p)).name)
+    else:
+        out["_clip_name"] = ""
+    sort_cols = [c for c in ("_clip_name", "file_id", "peak_window_start") if c in out.columns]
+    out = out.sort_values(sort_cols, kind="mergesort").reset_index(drop=True)
+    out["segment_id"] = np.arange(1, len(out) + 1)
+    return out.drop(columns=["_clip_name"])
 
 
 def write_peak_clips(

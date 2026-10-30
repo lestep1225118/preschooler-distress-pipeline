@@ -1,10 +1,24 @@
-"""Read WAV segments without loading entire long files into memory."""
+"""Read audio segments without loading entire long files into memory."""
 
 from __future__ import annotations
 
 from typing import Tuple
 
 import numpy as np
+
+AUDIO_EXTS = (".wav", ".mp3", ".m4a", ".flac")
+
+
+def audio_duration_sec(path: str) -> float:
+    import soundfile as sf
+
+    try:
+        with sf.SoundFile(path, "r") as f:
+            return float(len(f) / float(f.samplerate))
+    except (sf.LibsndfileError, OSError, RuntimeError):
+        import librosa
+
+        return float(librosa.get_duration(path=path))
 
 
 def read_wav_segment(wav_path: str, start_second: int, end_second: int) -> Tuple[np.ndarray, int]:

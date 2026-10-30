@@ -54,6 +54,24 @@ Needs WAV folder + LoRA adapter + GPU (or Sapelo2).
 - **Your own NVIDIA GPU (12 GB+):** step-by-step in `lab_pipeline/LOCAL_GPU_SETUP.md`
 - **Sapelo2:** see `lab_pipeline/README.md`
 
+### Next time (after the first install)
+
+Open PowerShell in this folder and start the app:
+
+```bash
+py -3.12 -m lab_pipeline.gui_app
+```
+
+Then:
+
+1. Set **Run folder** to a new name (one per participant or batch), e.g. `lab_runs/ID123`
+2. Set **Audio folder** to that person's recordings
+3. Set **LoRA adapter dir** (same path as last time)
+4. Set **Limit files / windows** to `0` for a full run, then **Tab 1 → Run AF3 scoring**
+5. Later, to review only: skip Tab 1, load the existing scores CSV, **Tab 2 → Phase 1**, then fill `output/review_notes_*.csv` (in the app or in Excel)
+
+Using a new **Run folder** keeps each person's output from overwriting the last one.
+
 ---
 
 # App B — VTC conversational turns

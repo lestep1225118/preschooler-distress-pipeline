@@ -44,6 +44,8 @@ def _write_config(
     top_fraction: float,
     episode_gap_sec: int,
     episode_pre_buffer_sec: int,
+    cluster_bottom50: bool = True,
+    episode_post_buffer_sec: int = 60,
 ) -> Path:
     run_path = _rel(run_dir)
     run_path.mkdir(parents=True, exist_ok=True)
@@ -57,6 +59,7 @@ def _write_config(
         "modes": {
             "consecutive": bool(consecutive),
             "cluster_top50": bool(cluster_top50),
+            "cluster_bottom50": bool(cluster_bottom50),
         },
         "cluster_gap_sec": 30,
         "top_fraction": float(top_fraction),
@@ -64,6 +67,7 @@ def _write_config(
         "write_clips": bool(write_clips),
         "episode_gap_sec": int(episode_gap_sec),
         "episode_pre_buffer_sec": int(episode_pre_buffer_sec),
+        "episode_post_buffer_sec": int(episode_post_buffer_sec),
         "scoring": {
             "audio_dir": str(_rel(audio_dir)) if audio_dir else None,
             "adapter_dir": None,
@@ -99,15 +103,20 @@ def build_audio_map(audio_dir: str, run_dir: str, recursive: bool = False) -> Tu
             wavs = spliced
             note = "using *_spliced_6hours.wav in folder"
         else:
-            wavs = sorted(root.rglob("*.wav") if recursive else root.glob("*.wav"))
+            from lab_pipeline.audio_io import AUDIO_EXTS
+
+            wavs = []
+            for ext in AUDIO_EXTS:
+                wavs.extend(root.rglob(f"*{ext}") if recursive else root.glob(f"*{ext}"))
+            wavs = sorted({p for p in wavs if p.is_file()})
             note = "recursive" if recursive else "top-level only"
 
         if not wavs:
-            return "", f"No WAV files under {root} ({note})"
+            return "", f"No audio files under {root} ({note})"
         if len(wavs) > 5000:
             return (
                 "",
-                f"Found {len(wavs)} WAVs ({note}) — refusing to map that many. "
+                f"Found {len(wavs)} files ({note}) — refusing to map that many. "
                 "Point audio folder at the daylong recordings only, or use non-recursive.",
             )
 
@@ -127,7 +136,7 @@ def build_audio_map(audio_dir: str, run_dir: str, recursive: bool = False) -> Tu
         pd.DataFrame(rows).to_csv(out, index=False)
         return (
             str(out),
-            f"Mapped {len(rows)} WAV(s) across {pd.DataFrame(rows)['participant_id'].nunique()} "
+            f"Mapped {len(rows)} file(s) across {pd.DataFrame(rows)['participant_id'].nunique()} "
             f"participant(s) ({note}).",
         )
     except Exception:
@@ -146,6 +155,8 @@ def run_phase1(
     top_fraction: float,
     episode_gap_sec: int,
     episode_pre_buffer_sec: int,
+    cluster_bottom50: bool = True,
+    episode_post_buffer_sec: int = 60,
 ) -> Tuple[str, Optional[pd.DataFrame], Optional[pd.DataFrame], Optional[pd.DataFrame]]:
     try:
         if not scores_csv or not _rel(scores_csv).is_file():
@@ -156,7 +167,7 @@ def run_phase1(
                 None,
                 None,
             )
-        if not consecutive and not cluster_top50:
+        if not consecutive and not cluster_top50 and not cluster_bottom50:
             return "Enable at least one review strategy.", None, None, None
 
         cfg_path = _write_config(
@@ -171,6 +182,8 @@ def run_phase1(
             top_fraction,
             episode_gap_sec,
             episode_pre_buffer_sec,
+            cluster_bottom50,
+            episode_post_buffer_sec,
         )
         # Import after config write; call main via subprocess-like API
         from lab_pipeline.run_phase1_review import main as phase1_main
@@ -197,16 +210,20 @@ def run_phase1(
         )
         n_c = 0
         n_k = 0
+        n_b = 0
         if (out / "clips_consecutive").is_dir():
             n_c = len(list((out / "clips_consecutive").glob("*.wav")))
         if (out / "clips_cluster_top50").is_dir():
             n_k = len(list((out / "clips_cluster_top50").glob("*.wav")))
+        if (out / "clips_cluster_bottom50").is_dir():
+            n_b = len(list((out / "clips_cluster_bottom50").glob("*.wav")))
         msg = (
             f"Phase 1 complete.\n"
             f"Output: {out}\n"
             f"Positive windows: {0 if pos is None else len(pos)}\n"
             f"Consecutive segments: {0 if consec is None else len(consec)} (clips: {n_c})\n"
             f"Cluster top-50% segments: {0 if clust is None else len(clust)} (clips: {n_k})\n"
+            f"Cluster bottom-50% segments: {n_b} clips\n"
             f"Fill review notes next (Review notes tab)."
         )
         # Preview only — full CSVs stay on disk
@@ -275,6 +292,8 @@ def run_phase2(
     top_fraction: float,
     episode_gap_sec: int,
     episode_pre_buffer_sec: int,
+    cluster_bottom50: bool = True,
+    episode_post_buffer_sec: int = 60,
 ) -> Tuple[str, Optional[pd.DataFrame], Optional[pd.DataFrame]]:
     try:
         notes = _rel(run_dir) / "output" / f"review_notes_{mode}.csv"
@@ -293,6 +312,8 @@ def run_phase2(
             top_fraction,
             episode_gap_sec,
             episode_pre_buffer_sec,
+            cluster_bottom50,
+            episode_post_buffer_sec,
         )
         from lab_pipeline.run_phase2_episodes import main as phase2_main
         import sys
@@ -342,7 +363,9 @@ def zip_folder(folder: Path, zip_path: Path) -> Optional[str]:
     return str(zip_path)
 
 
-def make_download_zips(run_dir: str) -> Tuple[Optional[str], Optional[str], Optional[str], str]:
+def make_download_zips(
+    run_dir: str,
+) -> Tuple[Optional[str], Optional[str], Optional[str], Optional[str], str]:
     out = _rel(run_dir) / "output"
     if not out.is_dir():
         return None, None, None, "No output folder yet."
@@ -351,11 +374,13 @@ def make_download_zips(run_dir: str) -> Tuple[Optional[str], Optional[str], Opti
     stamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     c1 = out / "clips_consecutive"
     c2 = out / "clips_cluster_top50"
+    c3 = out / "clips_cluster_bottom50"
     e = out / "phase2" / "episode_clips"
     ep_csv = out / "phase2" / "episodes.csv"
     z1 = zip_folder(c1, dl / f"clips_consecutive_{stamp}.zip") if c1.is_dir() else None
     z2 = zip_folder(c2, dl / f"clips_cluster_top50_{stamp}.zip") if c2.is_dir() else None
-    z3 = None
+    z3 = zip_folder(c3, dl / f"clips_cluster_bottom50_{stamp}.zip") if c3.is_dir() else None
+    z4 = None
     if e.is_dir():
         # Bundle episodes.csv with the clips so times/file IDs travel with the audio
         stage = dl / f"_episode_bundle_{stamp}"
@@ -364,9 +389,9 @@ def make_download_zips(run_dir: str) -> Tuple[Optional[str], Optional[str], Opti
         shutil.copytree(e, stage)
         if ep_csv.is_file():
             shutil.copy2(ep_csv, stage / "episodes.csv")
-        z3 = zip_folder(stage, dl / f"episode_clips_{stamp}.zip")
+        z4 = zip_folder(stage, dl / f"episode_clips_{stamp}.zip")
         shutil.rmtree(stage, ignore_errors=True)
-    return z1, z2, z3, f"Downloads folder: {dl}"
+    return z1, z2, z3, z4, f"Downloads folder: {dl}"
 
 
 def gpu_status() -> str:
@@ -558,7 +583,7 @@ Daylong files are slow on a laptop GPU — use **Limit files** / **Limit windows
 
 **Sapelo2 (recommended for full daylong runs):** click **Prepare Sapelo2 bundle**, follow `sapelo2_bundle/README.txt`, then paste the downloaded scores CSV above and continue to Phase 1.
 
-Do **not** concatenate multi-day recordings. Multiple files per child are supported.
+Do **not** concatenate multi-day recordings. Multiple files per child are supported. WAV and MP3 both work (MP3 needs ffmpeg on this computer).
 """
 
 
@@ -584,7 +609,7 @@ Use both review strategies if needed. Keep multiple recordings per child as **se
             run_dir = gr.Textbox(label="Run folder", value=default_run, scale=2)
             scores_csv = gr.Textbox(label="Scores CSV (AF3 windows)", value=default_scores, scale=3)
         with gr.Row():
-            audio_dir = gr.Textbox(label="Audio folder (WAVs)", value=default_audio, scale=3)
+            audio_dir = gr.Textbox(label="Audio folder (WAV or MP3)", value=default_audio, scale=3)
             audio_map_csv = gr.Textbox(label="Audio map CSV (optional)", value="", scale=2)
             btn_map = gr.Button("Build audio map from folder", scale=1)
 
@@ -596,9 +621,11 @@ Use both review strategies if needed. Keep multiple recordings per child as **se
             with gr.Row():
                 consecutive = gr.Checkbox(label="Review mode: consecutive peak windows", value=True)
                 cluster_top50 = gr.Checkbox(label="Review mode: 30s clusters, top 50%", value=True)
+                cluster_bottom50 = gr.Checkbox(label="Review mode: 30s clusters, bottom 50%", value=True)
             with gr.Row():
                 episode_gap = gr.Number(label="Episode merge gap (sec)", value=300, precision=0)
                 pre_buffer = gr.Number(label="Episode pre-buffer (sec)", value=60, precision=0)
+                post_buffer = gr.Number(label="Episode post-buffer (sec)", value=60, precision=0)
 
         map_status = gr.Textbox(label="Audio map status", interactive=False)
         btn_map.click(build_audio_map, inputs=[audio_dir, run_dir], outputs=[audio_map_csv, map_status])
@@ -652,6 +679,8 @@ Use both review strategies if needed. Keep multiple recordings per child as **se
                 top_fraction,
                 episode_gap,
                 pre_buffer,
+                cluster_bottom50,
+                post_buffer,
             ):
                 msg, path = run_af3_score(
                     run_dir, audio_dir, audio_map_csv, adapter_dir, base_only, limit_files, limit_windows, resume
@@ -670,6 +699,8 @@ Use both review strategies if needed. Keep multiple recordings per child as **se
                     top_fraction,
                     episode_gap,
                     pre_buffer,
+                    cluster_bottom50,
+                    post_buffer,
                 )
                 return f"{msg}\n\n{p1_msg}", path, pos, c, k
 
@@ -706,6 +737,8 @@ Use both review strategies if needed. Keep multiple recordings per child as **se
                     top_fraction,
                     episode_gap,
                     pre_buffer,
+                    cluster_bottom50,
+                    post_buffer,
                 ],
                 outputs=[p1_status, pos_df, consec_df, clust_df],
             )
@@ -717,8 +750,8 @@ Use both review strategies if needed. Keep multiple recordings per child as **se
             )
             with gr.Row():
                 notes_mode = gr.Radio(
-                    choices=["consecutive", "cluster_top50"],
-                    value="consecutive",
+                    choices=["consecutive", "cluster_top50", "cluster_bottom50"],
+                    value="cluster_top50",
                     label="Which review strategy notes?",
                 )
                 reviewer = gr.Textbox(label="Reviewer name", value="")
@@ -735,8 +768,8 @@ Use both review strategies if needed. Keep multiple recordings per child as **se
 
         with gr.Tab("4 · Phase 2 — Episodes"):
             p2_mode = gr.Radio(
-                choices=["consecutive", "cluster_top50"],
-                value="consecutive",
+                choices=["consecutive", "cluster_top50", "cluster_bottom50"],
+                value="cluster_top50",
                 label="Notes / strategy to use for episodes",
             )
             btn_p2 = gr.Button("Run Phase 2", variant="primary")
@@ -759,6 +792,8 @@ Use both review strategies if needed. Keep multiple recordings per child as **se
                     top_fraction,
                     episode_gap,
                     pre_buffer,
+                    cluster_bottom50,
+                    post_buffer,
                 ],
                 outputs=[p2_status, secs_df, eps_df],
             )
@@ -769,11 +804,12 @@ Use both review strategies if needed. Keep multiple recordings per child as **se
             with gr.Row():
                 z_consec = gr.File(label="clips_consecutive.zip")
                 z_clust = gr.File(label="clips_cluster_top50.zip")
+                z_bottom = gr.File(label="clips_cluster_bottom50.zip")
                 z_ep = gr.File(label="episode_clips.zip")
             btn_zip.click(
                 make_download_zips,
                 inputs=[run_dir],
-                outputs=[z_consec, z_clust, z_ep, zip_status],
+                outputs=[z_consec, z_clust, z_bottom, z_ep, zip_status],
             )
 
         gr.Markdown(
@@ -800,6 +836,8 @@ Use both review strategies if needed. Keep multiple recordings per child as **se
                 top_fraction,
                 episode_gap,
                 pre_buffer,
+                cluster_bottom50,
+                post_buffer,
             ],
             outputs=[score_status, scores_csv, pos_df, consec_df, clust_df],
         )

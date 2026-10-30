@@ -118,6 +118,7 @@ def main() -> None:
 
     gap_sec = int(cfg.get("episode_gap_sec", 300))
     pre_buf = int(cfg.get("episode_pre_buffer_sec", 60))
+    post_buf = int(cfg.get("episode_post_buffer_sec", 60))
     write_clips = args.write_clips
     if write_clips is None:
         write_clips = bool(cfg.get("write_clips", True))
@@ -132,6 +133,7 @@ def main() -> None:
             pid = sub["participant_id"].iloc[0] if "participant_id" in sub.columns else file_id
             for i, (estart, eend) in enumerate(eps, start=1):
                 clip_start = max(0, estart - pre_buf)
+                clip_end = eend + post_buf
                 n_sec = sum(1 for s in secs if estart <= s < eend)
                 episode_rows.append(
                     {
@@ -145,9 +147,10 @@ def main() -> None:
                         "episode_span_sec": eend - estart,
                         "clip_start": clip_start,
                         "clip_start_hms": seconds_to_hms(clip_start),
-                        "clip_end": eend,
-                        "clip_end_hms": seconds_to_hms(eend),
+                        "clip_end": clip_end,
+                        "clip_end_hms": seconds_to_hms(clip_end),
                         "pre_buffer_sec": estart - clip_start,
+                        "post_buffer_sec": clip_end - eend,
                         "n_distress_seconds": n_sec,
                     }
                 )

@@ -13,6 +13,7 @@ threshold: 0.32
 modes:
   consecutive: true
   cluster_top50: true
+  cluster_bottom50: true
 
 cluster_gap_sec: 30
 top_fraction: 0.50
@@ -21,6 +22,7 @@ write_clips: false
 
 episode_gap_sec: 300
 episode_pre_buffer_sec: 60
+episode_post_buffer_sec: 60
 
 scoring:
   audio_dir: null
